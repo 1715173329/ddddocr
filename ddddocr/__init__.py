@@ -12,8 +12,8 @@ from PIL import Image, ImageChops
 import numpy as np
 import cv2
 
-
 onnxruntime.set_default_logger_severity(3)
+
 
 def base64_to_image(img_base64):
     img_data = base64.b64decode(img_base64)
@@ -54,7 +54,7 @@ class DdddOcr(object):
         self.__word = False
         self.__resize = []
         self.__charset_range = []
-        self.__valid_charset_range_index = [] # 指定字符对应的有效索引
+        self.__valid_charset_range_index = []  # 指定字符对应的有效索引
         self.__channel = 1
         if import_onnx_path != "":
             det = False
@@ -2418,6 +2418,63 @@ class DdddOcr(object):
         if ocr or det or self.use_import_onnx:
             self.__ort_session = onnxruntime.InferenceSession(self.__graph_path, providers=self.__providers)
 
+    def color_filter(self, pil_image, colors, custom_ranges=None):
+        # 预定义颜色阈值范围（HSV颜色空间）
+        color_ranges = {
+            'red': [(0, 100, 100), (10, 255, 255), (170, 100, 100), (180, 255, 255)],
+            'green': [(35, 50, 50), (85, 255, 255)],
+            'blue': [(90, 50, 50), (130, 255, 255)],
+            'yellow': [(20, 100, 100), (35, 255, 255)],
+            'orange': [(10, 100, 100), (20, 255, 255)],
+            'purple': [(130, 50, 50), (170, 255, 255)],
+            'pink': [(140, 50, 50), (170, 255, 255)],
+            'brown': [(0, 50, 50), (20, 255, 150)]
+        }
+
+        # 将Pillow图像转换为OpenCV格式
+        cv_image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+
+        # 合并自定义颜色范围
+        if custom_ranges:
+            color_ranges.update(custom_ranges)
+
+        # 将图像转换为HSV颜色空间
+        hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
+        # 创建掩码
+        final_mask = np.zeros_like(hsv_image[:, :, 0])
+
+        # 处理每种颜色
+        for color in colors:
+            if color.lower() in color_ranges:
+                color_range = color_ranges[color.lower()]
+
+                # 处理多个颜色范围（主要针对红色）
+                if len(color_range) > 2:
+                    for lower, upper in zip(color_range[::2], color_range[1::2]):
+                        lower_bound = np.array(lower)
+                        upper_bound = np.array(upper)
+                        temp_mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
+                        final_mask = cv2.bitwise_or(final_mask, temp_mask)
+                else:
+                    lower_bound = np.array(color_range[0])
+                    upper_bound = np.array(color_range[1])
+                    temp_mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
+                    final_mask = cv2.bitwise_or(final_mask, temp_mask)
+
+        # 应用掩码
+        result = cv2.bitwise_and(cv_image, cv_image, mask=final_mask)
+
+        # 将背景设为白色
+        white_background = np.ones_like(cv_image) * 255
+        result = cv2.bitwise_or(result, white_background, mask=cv2.bitwise_not(final_mask))
+
+        # 将OpenCV图像转换回Pillow图像
+        result_rgb = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+        result_pil = Image.fromarray(result_rgb)
+
+        return result_pil
+
     def preproc(self, img, input_size, swap=(2, 0, 1)):
         if len(img.shape) == 3:
             padded_img = np.ones((input_size[0], input_size[1], 3), dtype=np.uint8) * 114
@@ -2605,8 +2662,7 @@ class DdddOcr(object):
                     pass
         self.__valid_charset_range_index = valid_charset_range_index
 
-
-    def classification(self, img, png_fix: bool = False, probability=False):
+    def classification(self, img, png_fix: bool = False, probability=False, colors=[], custom_color_ranges=None):
         if self.det:
             raise TypeError("当前识别类型为目标检测")
         if not isinstance(img, (bytes, str, pathlib.PurePath, Image.Image)):
@@ -2620,6 +2676,8 @@ class DdddOcr(object):
         else:
             assert isinstance(img, pathlib.PurePath)
             image = Image.open(img)
+        if len(colors) > 0 or (custom_color_ranges is not None and isinstance(custom_color_ranges, list)):
+            image = self.color_filter(image, colors, custom_color_ranges)
         if not self.use_import_onnx:
             image = image.resize((int(image.size[0] * (64 / image.size[1])), 64), Image.ANTIALIAS).convert('L')
         else:
@@ -2681,7 +2739,7 @@ class DdddOcr(object):
                         valid_charset_range_index = self.__valid_charset_range_index
                         probability_result = []
                         for item in ort_outs_probability:
-                            probability_result.append([item[i] for i in valid_charset_range_index ])
+                            probability_result.append([item[i] for i in valid_charset_range_index])
                         result['probability'] = probability_result
                     return result
                 else:
