@@ -470,6 +470,13 @@ class DdddOcr(object):
         elif isinstance(charset_range, str):
             charset_range_list = list(charset_range)
             self.__charset_range = charset_range_list
+        elif isinstance(charset_range, (list, tuple, set)):
+            charset_range_list = []
+            for item in charset_range:
+                if not isinstance(item, str) or not item:
+                    raise DdddOcrInputError("charset_range 列表中只能包含非空字符串")
+                charset_range_list.append(item)
+            self.__charset_range = charset_range_list
         else:
             raise TypeError("暂时不支持该类型数据的输入")
 
@@ -490,7 +497,7 @@ class DdddOcr(object):
                       colors: Optional[Iterable[str]] = None,
                       custom_color_ranges: Optional[Mapping[str, Sequence[Sequence[int]]]] = None):
         if self.det:
-            raise TypeError("��ǰʶ������ΪĿ����")
+            raise TypeError("当前识别类型为目标检测")
         png_fix = _coerce_bool(png_fix, 'png_fix')
         probability = _coerce_bool(probability, 'probability')
         image = self._load_image(img)
@@ -499,6 +506,9 @@ class DdddOcr(object):
         if normalized_colors or normalized_custom_ranges:
 
             image = self.color_filter(image, normalized_colors, normalized_custom_ranges)
+        if png_fix:
+            if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+                image = png_rgba_black_preprocess(image.convert("RGBA"))
         if not self.use_import_onnx:
             image = image.resize((int(image.size[0] * (64 / image.size[1])), 64), Image.ANTIALIAS).convert('L')
         else:
@@ -513,10 +523,7 @@ class DdddOcr(object):
             if self.__channel == 1:
                 image = image.convert('L')
             else:
-                if png_fix:
-                    image = png_rgba_black_preprocess(image)
-                else:
-                    image = image.convert('RGB')
+                image = image.convert('RGB')
         image = np.array(image).astype(np.float32)
         image = np.expand_dims(image, axis=0) / 255.
         if not self.use_import_onnx:

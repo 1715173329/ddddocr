@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
-"""目标检测示例。"""
+"""
+目标检测示例（det=True）
+
+用法:
+  python examples/detector.py <图片路径>
+  python examples/detector.py <图片路径> --use-gpu
+"""
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import List
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ddddocr import DdddOcr, DdddOcrInputError, InvalidImageError
 
@@ -26,8 +35,7 @@ def format_boxes(boxes: List[List[int]]) -> str:
     lines = ["检测到的矩形框 (x_min, y_min, x_max, y_max):"]
     for idx, (x_min, y_min, x_max, y_max) in enumerate(boxes, 1):
         lines.append(f"  #{idx}: ({x_min}, {y_min}, {x_max}, {y_max})")
-    return "
-".join(lines)
+    return "\n".join(lines)
 
 
 def main() -> int:

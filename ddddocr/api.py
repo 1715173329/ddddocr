@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+try:
+    from pydantic import BaseModel, Field, field_validator
+except ImportError:  # pragma: no cover - fallback for older pydantic
+    from pydantic import BaseModel, Field, validator as field_validator
 import uvicorn
 import base64
 import io
@@ -123,7 +126,7 @@ def _coerce_bool_param(value: Union[bool, str], field_name: str) -> bool:
 class Base64Image(BaseModel):
     image: str = Field(..., description="Base64编码的图片数据")
     
-    @validator('image')
+    @field_validator('image')
     def validate_image(cls, value):
         return _validate_base64_payload(value, 'image')
     
@@ -132,16 +135,23 @@ class OCRRequest(Base64Image):
     colors: List[str] = Field(default_factory=list, description="颜色过滤列表")
     custom_color_ranges: Optional[Dict[str, List[List[int]]]] = Field(None, description="自定义颜色范围")
 
-    @validator('colors', each_item=True)
+    @field_validator('colors')
     def validate_colors(cls, value):
-        if not isinstance(value, str):
-            raise ValueError('colors 中的元素必须是字符串')
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError('colors 不允许包含空字符串')
-        return stripped
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise ValueError('colors 必须是字符串列表')
+        normalized = []
+        for item in value:
+            if not isinstance(item, str):
+                raise ValueError('colors 中的元素必须是字符串')
+            stripped = item.strip()
+            if not stripped:
+                raise ValueError('colors 不允许包含空字符串')
+            normalized.append(stripped)
+        return normalized
 
-    @validator('custom_color_ranges')
+    @field_validator('custom_color_ranges')
     def validate_custom_ranges(cls, value):
         if value is None:
             return value
@@ -153,26 +163,39 @@ class SlideMatchRequest(BaseModel):
     simple_target: bool = Field(False, description="是否使用简化目标")
     flag: bool = Field(False, description="标记选项")
 
-    @validator('target_image', 'background_image')
-    def validate_images(cls, value, field):
-        return _validate_base64_payload(value, field.name)
+    @field_validator('target_image')
+    def validate_target_image(cls, value):
+        return _validate_base64_payload(value, 'target_image')
+
+    @field_validator('background_image')
+    def validate_background_image(cls, value):
+        return _validate_base64_payload(value, 'background_image')
     
 class SlideComparisonRequest(BaseModel):
     target_image: str = Field(..., description="目标图片的Base64编码")
     background_image: str = Field(..., description="背景图片的Base64编码")
 
-    @validator('target_image', 'background_image')
-    def validate_images(cls, value, field):
-        return _validate_base64_payload(value, field.name)
+    @field_validator('target_image')
+    def validate_target_image(cls, value):
+        return _validate_base64_payload(value, 'target_image')
+
+    @field_validator('background_image')
+    def validate_background_image(cls, value):
+        return _validate_base64_payload(value, 'background_image')
     
 class CharsetRangeRequest(BaseModel):
     charset_range: List[str] = Field(..., description="字符范围")
 
-    @validator('charset_range', each_item=True)
+    @field_validator('charset_range')
     def validate_charset(cls, value):
-        if not isinstance(value, str) or not value:
-            raise ValueError('charset_range 需要为非空字符串')
-        return value
+        if not isinstance(value, list):
+            raise ValueError('charset_range 需要为字符串列表')
+        normalized = []
+        for item in value:
+            if not isinstance(item, str) or not item:
+                raise ValueError('charset_range 需要为非空字符串')
+            normalized.append(item)
+        return normalized
 
 class ModelConfig(BaseModel):
     ocr: bool = Field(True, description="是否启用OCR功能")
@@ -344,7 +367,7 @@ async def ocr_recognition(
     start_time = time.time()
     try:
         if request.probability:
-            result, probability = ocr_instance.classification(
+            result = ocr_instance.classification(
                 image,
                 probability=True,
                 colors=request.colors,
@@ -352,7 +375,6 @@ async def ocr_recognition(
             )
             response_data = {
                 "result": result,
-                "probability": probability,
                 "processing_time": time.time() - start_time
             }
         else:
@@ -437,7 +459,7 @@ async def ocr_recognition_file(
     start_time = time.time()
     try:
         if probability_flag:
-            result, prob = ocr_instance.classification(
+            result = ocr_instance.classification(
                 image,
                 probability=True,
                 colors=colors_list,
@@ -445,7 +467,6 @@ async def ocr_recognition_file(
             )
             response_data = {
                 "result": result,
-                "probability": prob,
                 "processing_time": time.time() - start_time
             }
         else:

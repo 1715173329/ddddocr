@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
-"""调用 FastAPI 服务的示例。"""
+"""
+调用 API 服务的示例（需要先启动 ddddocr api）
+
+用法:
+  python -m ddddocr api
+  python examples/api_client.py <图片路径>
+  python examples/api_client.py <图片路径> --endpoint http://127.0.0.1:8000/ocr
+  python examples/api_client.py <图片路径> --probability
+"""
 from __future__ import annotations
 
 import argparse
 import base64
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import requests
 

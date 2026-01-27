@@ -6,5 +6,5 @@ opencv-python-headless>=4.5.0; sys_platform == "linux"
 fastapi>=0.68.0
 uvicorn>=0.15.0
 python-multipart>=0.0.5
-pydantic>=1.8.0
+pydantic>=1.8.0,<3
 requests>=2.25.0

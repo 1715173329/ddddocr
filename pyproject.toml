@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ddddocr"
-version = "1.5.8"
+version = "1.6.0"
 description = "带带弟弟OCR"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,7 +35,7 @@ api = [
   "fastapi>=0.68.0",
   "uvicorn>=0.15.0",
   "python-multipart>=0.0.5",
-  "pydantic>=1.8.0",
+  "pydantic>=1.8.0,<3",
 ]
 
 [project.scripts]

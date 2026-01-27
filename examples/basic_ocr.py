@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
-"""基本的 OCR 使用示例。"""
+"""
+基本 OCR 识别示例（本地离线）
+
+用法:
+  python examples/basic_ocr.py <图片路径>
+  python examples/basic_ocr.py <图片路径> --probability
+  python examples/basic_ocr.py <图片路径> --colors red green
+  python examples/basic_ocr.py <图片路径> --beta
+  python examples/basic_ocr.py <图片路径> --old
+"""
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ddddocr import DdddOcr, DdddOcrInputError, InvalidImageError
 

@@ -93,7 +93,13 @@ pip install ddddocr
 ```bash
 git clone https://github.com/sml2h3/ddddocr.git
 cd ddddocr
-python setup.py install
+pip install .
+```
+
+### 安装 API 依赖（可选）
+
+```bash
+pip install ".[api]"
 ```
 
 > **注意**：请勿直接在ddddocr项目的根目录内直接import ddddocr，请确保你的开发项目目录名称不为ddddocr。
@@ -123,7 +129,9 @@ ddddocr.DdddOcr(
     device_id=0,        # 使用的GPU设备ID
     show_ad=True,       # 是否显示广告信息
     import_onnx_path="", # 自定义模型路径
-    charsets_path=""     # 自定义字符集路径
+    charsets_path="",    # 自定义字符集路径
+    max_image_bytes=None, # 单图最大字节数（默认 8MB）
+    max_image_side=None   # 单图最长边限制（默认 4096px）
 )
 ```
 
@@ -131,15 +139,17 @@ ddddocr.DdddOcr(
 
 | 参数 | 类型 | 默认值 | 说明 |
 |-----|-----|-----|-----|
-| `ocr` | bool | True | 是否启用OCR功能，用于识别图片中的文字。**互斥性**：与`det=True`同时使用时，会优先使用OCR功能 |
-| `det` | bool | False | 是否启用目标检测功能，用于检测图片中的目标位置。**互斥性**：如果同时设置`ocr=True`，则目标检测功能不会启用 |
-| `old` | bool | False | 是否使用旧版OCR模型。**互斥性**：与`beta=True`参数互斥，两者都设置为True时，优先使用`beta`参数 |
-| `beta` | bool | False | 是否使用Beta版OCR模型（新模型），对某些验证码识别效果更好。**互斥性**：与`old=True`参数互斥 |
-| `use_gpu` | bool | False | 是否使用GPU加速。**依赖关系**：需要安装CUDA和相应的onnxruntime-gpu版本，否则会回退到CPU模式 |
+| `ocr` | bool | True | 是否启用OCR功能，用于识别图片中的文字。**互斥性**：当`det=True`时会强制关闭OCR |
+| `det` | bool | False | 是否启用目标检测功能，用于检测图片中的目标位置。**互斥性**：`det=True`会覆盖`ocr=True` |
+| `old` | bool | False | 兼容参数，当前不会改变模型选择（默认即使用旧版模型） |
+| `beta` | bool | False | 是否使用Beta版OCR模型（新模型），对某些验证码识别效果更好。**互斥性**：与`old=True`参数互斥（但`old`当前不生效） |
+| `use_gpu` | bool | False | 是否使用GPU加速。**依赖关系**：需要安装CUDA和相应的onnxruntime-gpu版本，否则会初始化失败 |
 | `device_id` | int | 0 | 使用的GPU设备ID。**依赖关系**：仅在`use_gpu=True`时生效，指定使用哪个GPU设备 |
 | `show_ad` | bool | True | 是否在初始化时显示广告信息 |
-| `import_onnx_path` | str | "" | 自定义模型的onnx文件路径。**依赖关系**：设置此参数时，`charsets_path`参数必须同时提供 |
+| `import_onnx_path` | str | "" | 自定义模型的onnx文件路径。**依赖关系**：设置此参数时，`charsets_path`参数必须同时提供；此时`ocr/det`设置会被忽略 |
 | `charsets_path` | str | "" | 自定义字符集的json文件路径。**依赖关系**：必须与`import_onnx_path`一起使用，否则无效 |
+| `max_image_bytes` | int/str | 8MB | 单图最大字节数上限（入参可为 int 或数字字符串） |
+| `max_image_side` | int/str | 4096 | 单图最长边像素上限（入参可为 int 或数字字符串） |
 
 ### 功能组合与冲突
 
@@ -152,7 +162,7 @@ ddddocr.DdddOcr(
 2. **目标检测模式**：
    - 参数设置：`ocr=False, det=True`
    - 功能：检测图片中的目标位置
-   - 注意：同时设置`ocr=True, det=True`会优先使用OCR功能，目标检测不生效
+   - 注意：同时设置`ocr=True, det=True`时，会进入目标检测模式（`det`优先）
 
 3. **滑块识别模式**：
    - 参数设置：`ocr=False, det=False`
@@ -161,18 +171,18 @@ ddddocr.DdddOcr(
 4. **自定义模型模式**：
    - 参数设置：`import_onnx_path="模型路径", charsets_path="字符集路径"`
    - 功能：使用自定义训练的模型进行识别
-   - 注意：设置此模式时，`ocr`和`det`参数会被忽略
+   - 注意：设置此模式时，`ocr`和`det`参数会被忽略，且自定义字符集文件需包含 `charset/word/image/channel` 字段
 
 5. **OCR模型选择**：
-   - 默认模型：不设置特殊参数
-   - Beta模型：`beta=True`
-   - 旧版模型：`old=True`（不推荐，已废弃）
-   - 注意：`beta`和`old`参数互斥，同时设置时优先使用`beta`
+   - 默认模型：不设置特殊参数（当前使用 `common_old.onnx`）
+   - Beta模型：`beta=True`（使用 `common.onnx`）
+   - 旧版模型参数：`old=True`（当前不改变模型，仅为兼容保留）
+   - 注意：`beta`和`old`参数互斥，但`old`当前不生效
 
 ### 模型选择指南
 
-- **默认模型**：适用于大多数简单的验证码场景，平衡了速度和准确性
-- **Beta模型**：针对复杂验证码有更好的表现，但可能处理速度稍慢
+- **默认模型**：当前默认使用 `common_old.onnx`，适用于多数简单验证码场景
+- **Beta模型**：`beta=True` 使用 `common.onnx`，对部分复杂验证码效果更好
 - **自定义模型**：当默认模型无法满足需求时，可以通过[dddd_trainer](https://github.com/sml2h3/dddd_trainer)训练自己的模型
 
 ### 性能优化参数
@@ -246,13 +256,13 @@ ocr = ddddocr.DdddOcr(beta=True)
 
 **透明PNG图片处理**
 
-对于部分透明黑色PNG格式图片，可以使用`png_fix`参数：
+对于透明黑色PNG图片，可以使用`png_fix`参数（对所有 OCR 模式生效）：
 
 ```python
 result = ocr.classification(image, png_fix=True)
 ```
 
-> **注意**：初始化DdddOcr对象只需要一次，不要在每次识别时都重新初始化，这会导致速度变慢。
+> **注意**：`png_fix` 仅对带透明通道的图片生效；初始化DdddOcr对象只需要一次，不要在每次识别时都重新初始化，这会导致速度变慢。
 
 #### OCR概率输出
 
@@ -275,7 +285,7 @@ for i in result['probability']:
 print(s)
 ```
 
-**概率输出示例**：
+**概率输出示例**（仅对内置模型生效，自定义模型会忽略`probability=True`并直接返回字符串）：
 
 ```python
 # 概率输出结果示例
@@ -358,6 +368,8 @@ custom_ranges = {
 result = ocr.classification(image, colors=["light_blue"], custom_color_ranges=custom_ranges)
 ```
 
+> **提示**：`custom_color_ranges` 只有在 `colors` 列表包含对应键名时才会生效。
+
 ### 目标检测功能
 
 用于检测图像中可能的目标主体位置，返回目标的边界框坐标：
@@ -423,7 +435,22 @@ with open('background.png', 'rb') as f:
 
 # 匹配位置
 res = slide.slide_match(target_bytes, background_bytes)
-print(res)  # 输出格式：{"target_x": x, "target_y": y, "target": [x1, y1, x2, y2]}
+print(f"滑块位置: {res}")
+
+# 可视化结果
+background = cv2.imdecode(np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_COLOR)
+x1, y1, x2, y2 = res["target"]
+
+# 在背景图上绘制匹配位置
+cv2.rectangle(background, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+# 显示结果
+plt.figure(figsize=(10, 6))
+plt.imshow(cv2.cvtColor(background, cv2.COLOR_BGR2RGB))
+plt.title("滑块匹配结果")
+plt.axis('off')
+plt.savefig("slide_result.jpg")
+plt.show()
 ```
 
 **滑块匹配示例**：
@@ -676,14 +703,14 @@ print(f"验证码识别结果: {result}")
 
 6. **参数冲突问题**  
    当同时设置多个模式参数时，需注意优先级：
-   - `ocr=True`和`det=True`同时设置时，优先使用OCR功能
-   - `beta=True`和`old=True`同时设置时，优先使用Beta模型
+   - `ocr=True`和`det=True`同时设置时，优先使用目标检测模式
+   - `beta=True`和`old=True`同时设置时，使用Beta模型（`old`当前不生效）
    - 设置`import_onnx_path`时，`ocr`和`det`参数会被忽略
 
 7. **支持的图片格式**  
    ddddocr支持多种图片格式：
    - JPG/JPEG
-   - PNG (带透明通道时建议使用`png_fix=True`)
+   - PNG (带透明通道时可配合`png_fix=True`)
    - BMP
    - GIF (仅识别第一帧)
    
@@ -774,6 +801,314 @@ plt.savefig("slide_result.jpg")
 plt.show()
 ```
 
+## API 服务
+
+DdddOcr 提供了一键启动 API 服务的功能，可以通过 RESTful API 的方式访问 DdddOcr 的所有功能。
+
+### 命令行启动 API 服务
+
+```bash
+# 使用默认配置启动 API 服务
+python -m ddddocr api
+
+# 指定 API 服务配置
+python -m ddddocr api --host 0.0.0.0 --port 8000 --workers 4
+
+# 配置 OCR 功能
+python -m ddddocr api --ocr true --beta true
+
+# 配置目标检测功能
+python -m ddddocr api --ocr false --det true
+```
+
+> **提示**：如果直接运行 `python -m ddddocr.api`，默认会绑定在 `127.0.0.1`，可通过环境变量 `DDDDOCR_HOST` 覆盖。
+
+### API 命令行参数说明
+
+| 参数名 | 类型 | 默认值 | 说明 |
+|-------|------|-------|------|
+| `--host` | 字符串 | 0.0.0.0 | API 服务主机地址（`python -m ddddocr api` 默认） |
+| `--port` | 整数 | 8000 | API 服务端口 |
+| `--workers` | 整数 | 1 | API 服务工作进程数 |
+| `--ocr` | 布尔值 | true | 是否启用 OCR 功能 |
+| `--det` | 布尔值 | false | 是否启用目标检测功能 |
+| `--old` | 布尔值 | false | 是否使用旧版 OCR 模型 |
+| `--beta` | 布尔值 | false | 是否使用 Beta 版 OCR 模型 |
+| `--use-gpu` | 布尔值 | false | 是否使用 GPU 加速 |
+| `--device-id` | 整数 | 0 | GPU 设备 ID |
+| `--show-ad` | 布尔值 | true | 是否显示广告 |
+| `--import-onnx-path` | 字符串 | "" | 自定义模型路径 |
+| `--charsets-path` | 字符串 | "" | 自定义字符集路径 |
+
+### 使用 Docker 运行 API 服务
+
+#### 构建并运行 Docker 镜像
+
+```bash
+# 构建 Docker 镜像
+docker build -t ddddocr-api .
+
+# 运行 Docker 容器
+docker run -d --name ddddocr-api -p 8000:8000 ddddocr-api
+
+# 使用自定义配置运行
+docker run -d --name ddddocr-api \
+  -p 8000:8000 \
+  -e DDDDOCR_OCR=true \
+  -e DDDDOCR_BETA=true \
+  -e DDDDOCR_WORKERS=4 \
+  ddddocr-api
+```
+
+#### 使用 Docker Compose 运行 API 服务
+
+```bash
+# 使用默认配置启动
+docker-compose up -d
+
+# 使用自定义配置启动
+DDDDOCR_OCR=true DDDDOCR_BETA=true DDDDOCR_WORKERS=4 docker-compose up -d
+```
+
+### API 接口说明
+
+API 服务提供了以下接口：
+
+#### 1. 文字识别接口 (OCR)
+
+```
+POST /ocr
+```
+
+请求体：
+
+```json
+{
+  "image": "图片的Base64编码字符串",
+  "probability": false,
+  "colors": [],
+  "custom_color_ranges": null
+}
+```
+
+响应：
+
+```json
+{
+  "result": "识别到的文字",
+  "processing_time": 0.123
+}
+```
+
+> **注意**：当 `probability=true` 时，API 会返回 `result` 为一个字典，包含 `charsets` 与 `probability` 字段，结构与本地 `classification(probability=True)` 一致。
+
+#### 2. 目标检测接口
+
+```
+POST /det
+```
+
+请求体：
+
+```json
+{
+  "image": "图片的Base64编码字符串"
+}
+```
+
+响应：
+
+```json
+{
+  "result": [
+    [x1, y1, x2, y2],
+    ...
+  ],
+  "processing_time": 0.123
+}
+```
+
+#### 3. 滑块匹配接口
+
+```
+POST /slide_match
+```
+
+请求体：
+
+```json
+{
+  "target_image": "目标图片的Base64编码字符串",
+  "background_image": "背景图片的Base64编码字符串",
+  "simple_target": false,
+  "flag": false
+}
+```
+
+响应：
+
+```json
+{
+  "result": {
+    "target_x": 0,
+    "target_y": 0,
+    "target": [x1, y1, x2, y2]
+  },
+  "processing_time": 0.123
+}
+```
+
+#### 4. 滑块比较接口
+
+```
+POST /slide_comparison
+```
+
+请求体：
+
+```json
+{
+  "target_image": "目标图片的Base64编码字符串",
+  "background_image": "背景图片的Base64编码字符串"
+}
+```
+
+响应：
+
+```json
+{
+  "result": {
+    "target": [x, y]
+  },
+  "processing_time": 0.123
+}
+```
+
+#### 5. 设置字符范围接口
+
+```
+POST /set_charset_range
+```
+
+请求体：
+
+```json
+{
+  "charset_range": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+}
+```
+
+响应：
+
+```json
+{
+  "result": "字符范围设置成功",
+  "charset_range": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+  "processing_time": 0.123
+}
+```
+
+
+#### 6. 健康检查接口
+
+```
+GET /health
+```
+
+响应：
+
+```json
+{
+  "status": "ok",
+  "timestamp": 1628765432.1234
+}
+```
+
+#### 文件上传接口
+
+所有上述接口都支持通过表单上传文件的方式提交请求。例如：
+
+```
+POST /ocr/file
+```
+
+可以通过表单字段上传图片文件。
+
+### API 客户端示例
+
+#### Python 示例 (Base64编码方式)
+
+```python
+import requests
+import base64
+
+# 读取图片文件并Base64编码
+with open("captcha.png", "rb") as f:
+    img_base64 = base64.b64encode(f.read()).decode()
+
+# 发送OCR请求
+url = "http://localhost:8000/ocr"
+response = requests.post(url, json={"image": img_base64})
+
+# 处理响应
+result = response.json()
+print(f"识别结果: {result['result']}")
+```
+
+#### Python 示例 (文件上传方式)
+
+```python
+import requests
+
+# 准备文件
+files = {"file": open("captcha.png", "rb")}
+
+# 发送OCR请求
+url = "http://localhost:8000/ocr/file"
+response = requests.post(url, files=files)
+
+# 处理响应
+result = response.json()
+print(f"识别结果: {result['result']}")
+```
+
+### Docker 环境变量配置参考
+
+| 环境变量名 | 默认值 | 说明 |
+|-----------|-------|------|
+| `DDDDOCR_HOST` | 0.0.0.0（CLI 默认）/ 127.0.0.1（直接运行 api.py 默认） | API 服务主机地址 |
+| `DDDDOCR_PORT` | 8000 | API 服务端口 |
+| `DDDDOCR_WORKERS` | 1 | API 服务工作进程数 |
+| `DDDDOCR_OCR` | true | 是否启用 OCR 功能 |
+| `DDDDOCR_DET` | false | 是否启用目标检测功能 |
+| `DDDDOCR_OLD` | false | 是否使用旧版 OCR 模型 |
+| `DDDDOCR_BETA` | false | 是否使用 Beta 版 OCR 模型 |
+| `DDDDOCR_USE_GPU` | false | 是否使用 GPU 加速 |
+| `DDDDOCR_DEVICE_ID` | 0 | GPU 设备 ID |
+| `DDDDOCR_SHOW_AD` | true | 是否显示广告 |
+| `DDDDOCR_IMPORT_ONNX_PATH` | "" | 自定义模型路径 |
+| `DDDDOCR_CHARSETS_PATH` | "" | 自定义字符集路径 |
+
 ## 许可证
 
 本项目采用MIT许可证，详情请参阅[LICENSE](https://github.com/sml2h3/ddddocr/blob/master/LICENSE)文件。 
+## 输入与输出校验说明
+
+- **图片合法性**：所有 Base64 与文件上传都会做尺寸、格式与大小校验（默认上限 8192 KB、最长边 4096px，可在实例化 `DdddOcr(max_image_bytes=..., max_image_side=...)` 时自定义），异常时返回 400。
+- **允许格式**：PNG / JPEG / JPG / WEBP / BMP / GIF / TIFF。
+- **输入类型**：本地调用支持 `bytes/bytearray`、Base64 字符串、文件路径或 `PIL.Image`。
+- **类型约束**：`DdddOcr` 的公开方法会校验布尔/整数参数，`FastAPI` 层也通过 Pydantic 验证请求体，错误会带具体字段。
+- **统一异常**：核心库新增 `DdddOcrInputError` / `InvalidImageError`，API 会把这些异常映射为 400，方便调用方处理。
+- **响应结构**：HTTP 接口现有明确的 `response_model`，文档 (`/docs`) 中可直接查看字段含义。
+- **模式提示**：在 `det=True` 模式下调用 `classification` 会抛出 “当前识别类型为目标检测”。
+
+## 示例库
+
+仓库新增 `examples/` 目录，覆盖本地调用、目标检测和 HTTP 客户端等典型场景：
+
+- `basic_ocr.py`：最小 OCR 示例，可演示概率输出与颜色过滤。
+- `detector.py`：演示如何用 `det=True` 模式返回所有检测框。
+- `api_client.py`：演示如何向 `python -m ddddocr api` 服务发送 JSON 请求。
+- `generate_basic_ocr_cases.py`：生成基础 OCR 测试用例图片。
+
+详细说明见 `examples/README.md`，可结合 README 其他章节快速起步。

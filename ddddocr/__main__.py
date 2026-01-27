@@ -18,8 +18,8 @@ def main():
     api_parser = subparsers.add_parser('api', help='启动 API 服务')
     
     # API 服务配置
-    api_parser.add_argument('--host', type=str, default='127.0.0.1',
-                           help='API 服务主机地址，默认 127.0.0.1')
+    api_parser.add_argument('--host', type=str, default='0.0.0.0',
+                           help='API 服务主机地址，默认 0.0.0.0')
     api_parser.add_argument('--port', type=int, default=8000,
                            help='API 服务端口，默认 8000')
     api_parser.add_argument('--workers', type=int, default=1,

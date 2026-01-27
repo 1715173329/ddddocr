@@ -3,3 +3,8 @@ onnxruntime
 Pillow
 opencv-python; sys_platform == "win32" or sys_platform == "darwin"
 opencv-python-headless; sys_platform == "linux"
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-multipart>=0.0.5
+pydantic>=1.8.0,<3
+requests>=2.25.0
