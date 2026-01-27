@@ -228,22 +228,23 @@ print(result)  # 输出识别结果
 
 **OCR识别示例图片**
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="https://cdn.wenanzhe.com/img/20210715211733855.png" width="150"/><br/>
-      <strong>识别结果：</strong> 7MZX
-    </td>
-    <td align="center">
-      <img src="https://cdn.wenanzhe.com/img/78b7f57d-371d-4b65-afb2-d19608ae1892.png" width="150"/><br/>
-      <strong>识别结果：</strong> 8CCM
-    </td>
-    <td align="center">
-      <img src="https://cdn.wenanzhe.com/img/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20211226142305.png" width="150"/><br/>
-      <strong>识别结果：</strong> 中文验证码
-    </td>
-  </tr>
-</table>
+**参考例图**
+
+包括且不限于以下图片
+
+<img src="https://cdn.wenanzhe.com/img/20210715211733855.png" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/78b7f57d-371d-4b65-afb2-d19608ae1892.png" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20211226142305.png" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20211226142325.png" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/2AMLyA_fd83e1f1800e829033417ae6dd0e0ae0.png" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/aabd_181ae81dd5526b8b89f987d1179266ce.jpg" alt="captcha" width="150">
+<br />
+<img src="https://cdn.wenanzhe.com/img/2bghz_b504e9f9de1ed7070102d21c6481e0cf.png" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/0000_z4ecc2p65rxc610x.jpg" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/2acd_0586b6b36858a4e8a9939db8a7ec07b7.jpg" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/2a8r_79074e311d573d31e1630978fe04b990.jpg" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/aftf_C2vHZlk8540y3qAmCM.bmp" alt="captcha" width="150">
+<img src="https://cdn.wenanzhe.com/img/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20211226144057.png" alt="captcha" width="150">
 
 **OCR模型选择**
 
@@ -399,19 +400,18 @@ cv2.imwrite("result.jpg", im)
 
 **目标检测示例**：
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="https://cdn.wenanzhe.com/img/page1_1.jpg" width="200"/><br/>
-      <strong>原始图片</strong>
-    </td>
-    <td align="center">
-      <img src="https://cdn.wenanzhe.com/img/result.jpg" width="200"/><br/>
-      <strong>检测结果</strong>
-    </td>
-  </tr>
-</table>
+**参考例图**
 
+包括且不限于以下图片
+
+<img src="https://cdn.wenanzhe.com/img/page1_1.jpg" alt="captcha" width="200">
+<img src="https://cdn.wenanzhe.com/img/page1_2.jpg" alt="captcha" width="200">
+<img src="https://cdn.wenanzhe.com/img/page1_3.jpg" alt="captcha" width="200">
+<img src="https://cdn.wenanzhe.com/img/page1_4.jpg" alt="captcha" width="200">
+<br />
+<img src="https://cdn.wenanzhe.com/img/result.jpg" alt="captcha" width="200">
+<img src="https://cdn.wenanzhe.com/img/result2.jpg" alt="captcha" width="200">
+<img src="https://cdn.wenanzhe.com/img/result4.jpg" alt="captcha" width="200">
 ### 滑块验证码处理
 
 DdddOcr提供两种滑块验证码处理算法：
