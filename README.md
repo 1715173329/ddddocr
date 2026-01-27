@@ -93,7 +93,13 @@ pip install ddddocr
 ```bash
 git clone https://github.com/sml2h3/ddddocr.git
 cd ddddocr
-python setup.py install
+pip install .
+```
+
+### 安装 API 依赖（可选）
+
+```bash
+pip install ".[api]"
 ```
 
 > **注意**：请勿直接在ddddocr项目的根目录内直接import ddddocr，请确保你的开发项目目录名称不为ddddocr。
@@ -423,7 +429,22 @@ with open('background.png', 'rb') as f:
 
 # 匹配位置
 res = slide.slide_match(target_bytes, background_bytes)
-print(res)  # 输出格式：{"target_x": x, "target_y": y, "target": [x1, y1, x2, y2]}
+print(f"滑块位置: {res}")
+
+# 可视化结果
+background = cv2.imdecode(np.frombuffer(background_bytes, np.uint8), cv2.IMREAD_COLOR)
+x1, y1, x2, y2 = res["target"]
+
+# 在背景图上绘制匹配位置
+cv2.rectangle(background, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+# 显示结果
+plt.figure(figsize=(10, 6))
+plt.imshow(cv2.cvtColor(background, cv2.COLOR_BGR2RGB))
+plt.title("滑块匹配结果")
+plt.axis('off')
+plt.savefig("slide_result.jpg")
+plt.show()
 ```
 
 **滑块匹配示例**：
@@ -774,6 +795,302 @@ plt.savefig("slide_result.jpg")
 plt.show()
 ```
 
+## API 服务
+
+DdddOcr 提供了一键启动 API 服务的功能，可以通过 RESTful API 的方式访问 DdddOcr 的所有功能。
+
+### 命令行启动 API 服务
+
+```bash
+# 使用默认配置启动 API 服务
+python -m ddddocr api
+
+# 指定 API 服务配置
+python -m ddddocr api --host 0.0.0.0 --port 8000 --workers 4
+
+# 配置 OCR 功能
+python -m ddddocr api --ocr true --beta true
+
+# 配置目标检测功能
+python -m ddddocr api --ocr false --det true
+```
+
+### API 命令行参数说明
+
+| 参数名 | 类型 | 默认值 | 说明 |
+|-------|------|-------|------|
+| `--host` | 字符串 | 127.0.0.1 | API 服务主机地址 |
+| `--port` | 整数 | 8000 | API 服务端口 |
+| `--workers` | 整数 | 1 | API 服务工作进程数 |
+| `--ocr` | 布尔值 | true | 是否启用 OCR 功能 |
+| `--det` | 布尔值 | false | 是否启用目标检测功能 |
+| `--old` | 布尔值 | false | 是否使用旧版 OCR 模型 |
+| `--beta` | 布尔值 | false | 是否使用 Beta 版 OCR 模型 |
+| `--use-gpu` | 布尔值 | false | 是否使用 GPU 加速 |
+| `--device-id` | 整数 | 0 | GPU 设备 ID |
+| `--show-ad` | 布尔值 | true | 是否显示广告 |
+| `--import-onnx-path` | 字符串 | "" | 自定义模型路径 |
+| `--charsets-path` | 字符串 | "" | 自定义字符集路径 |
+
+### 使用 Docker 运行 API 服务
+
+#### 构建并运行 Docker 镜像
+
+```bash
+# 构建 Docker 镜像
+docker build -t ddddocr-api .
+
+# 运行 Docker 容器
+docker run -d --name ddddocr-api -p 8000:8000 ddddocr-api
+
+# 使用自定义配置运行
+docker run -d --name ddddocr-api \
+  -p 8000:8000 \
+  -e DDDDOCR_OCR=true \
+  -e DDDDOCR_BETA=true \
+  -e DDDDOCR_WORKERS=4 \
+  ddddocr-api
+```
+
+#### 使用 Docker Compose 运行 API 服务
+
+```bash
+# 使用默认配置启动
+docker-compose up -d
+
+# 使用自定义配置启动
+DDDDOCR_OCR=true DDDDOCR_BETA=true DDDDOCR_WORKERS=4 docker-compose up -d
+```
+
+### API 接口说明
+
+API 服务提供了以下接口：
+
+#### 1. 文字识别接口 (OCR)
+
+```
+POST /ocr
+```
+
+请求体：
+
+```json
+{
+  "image": "图片的Base64编码字符串",
+  "probability": false,
+  "colors": [],
+  "custom_color_ranges": null
+}
+```
+
+响应：
+
+```json
+{
+  "result": "识别到的文字",
+  "processing_time": 0.123
+}
+```
+
+#### 2. 目标检测接口
+
+```
+POST /det
+```
+
+请求体：
+
+```json
+{
+  "image": "图片的Base64编码字符串"
+}
+```
+
+响应：
+
+```json
+{
+  "result": [
+    [x1, y1, x2, y2, score],
+    ...
+  ],
+  "processing_time": 0.123
+}
+```
+
+#### 3. 滑块匹配接口
+
+```
+POST /slide_match
+```
+
+请求体：
+
+```json
+{
+  "target_image": "目标图片的Base64编码字符串",
+  "background_image": "背景图片的Base64编码字符串",
+  "simple_target": false,
+  "flag": false
+}
+```
+
+响应：
+
+```json
+{
+  "result": {
+    "target": [x1, y1, x2, y2],
+    "background": [x1, y1, x2, y2]
+  },
+  "processing_time": 0.123
+}
+```
+
+#### 4. 滑块比较接口
+
+```
+POST /slide_comparison
+```
+
+请求体：
+
+```json
+{
+  "target_image": "目标图片的Base64编码字符串",
+  "background_image": "背景图片的Base64编码字符串"
+}
+```
+
+响应：
+
+```json
+{
+  "result": [x, y],
+  "processing_time": 0.123
+}
+```
+
+#### 5. 设置字符范围接口
+
+```
+POST /set_charset_range
+```
+
+请求体：
+
+```json
+{
+  "charset_range": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+}
+```
+
+响应：
+
+```json
+{
+  "result": "字符范围设置成功",
+  "charset_range": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+  "processing_time": 0.123
+}
+```
+
+#### 6. 健康检查接口
+
+```
+GET /health
+```
+
+响应：
+
+```json
+{
+  "status": "ok",
+  "timestamp": 1628765432.1234
+}
+```
+
+#### 文件上传接口
+
+所有上述接口都支持通过表单上传文件的方式提交请求。例如：
+
+```
+POST /ocr/file
+```
+
+可以通过表单字段上传图片文件。
+
+### API 客户端示例
+
+#### Python 示例 (Base64编码方式)
+
+```python
+import requests
+import base64
+
+# 读取图片文件并Base64编码
+with open("captcha.png", "rb") as f:
+    img_base64 = base64.b64encode(f.read()).decode()
+
+# 发送OCR请求
+url = "http://localhost:8000/ocr"
+response = requests.post(url, json={"image": img_base64})
+
+# 处理响应
+result = response.json()
+print(f"识别结果: {result['result']}")
+```
+
+#### Python 示例 (文件上传方式)
+
+```python
+import requests
+
+# 准备文件
+files = {"file": open("captcha.png", "rb")}
+
+# 发送OCR请求
+url = "http://localhost:8000/ocr/file"
+response = requests.post(url, files=files)
+
+# 处理响应
+result = response.json()
+print(f"识别结果: {result['result']}")
+```
+
+### Docker 环境变量配置参考
+
+| 环境变量名 | 默认值 | 说明 |
+|-----------|-------|------|
+| `DDDDOCR_HOST` | 0.0.0.0 | API 服务主机地址 |
+| `DDDDOCR_PORT` | 8000 | API 服务端口 |
+| `DDDDOCR_WORKERS` | 1 | API 服务工作进程数 |
+| `DDDDOCR_OCR` | true | 是否启用 OCR 功能 |
+| `DDDDOCR_DET` | false | 是否启用目标检测功能 |
+| `DDDDOCR_OLD` | false | 是否使用旧版 OCR 模型 |
+| `DDDDOCR_BETA` | false | 是否使用 Beta 版 OCR 模型 |
+| `DDDDOCR_USE_GPU` | false | 是否使用 GPU 加速 |
+| `DDDDOCR_DEVICE_ID` | 0 | GPU 设备 ID |
+| `DDDDOCR_SHOW_AD` | true | 是否显示广告 |
+| `DDDDOCR_IMPORT_ONNX_PATH` | "" | 自定义模型路径 |
+| `DDDDOCR_CHARSETS_PATH` | "" | 自定义字符集路径 |
+
 ## 许可证
 
 本项目采用MIT许可证，详情请参阅[LICENSE](https://github.com/sml2h3/ddddocr/blob/master/LICENSE)文件。 
+## 输入与输出校验说明
+
+- **图片合法性**：所有 Base64 与文件上传都会做尺寸、格式与大小校验（默认上限约为 8192 KB，可在实例化 `DdddOcr(max_image_bytes=..., max_image_side=...)` 时自定义），异常时返回 400。
+- **类型约束**：`DdddOcr` 的公开方法会校验布尔/整数参数，`FastAPI` 层也通过 Pydantic 验证请求体，错误会带具体字段。
+- **统一异常**：核心库新增 `DdddOcrInputError` / `InvalidImageError`，API 会把这些异常映射为 400，方便调用方处理。
+- **响应结构**：HTTP 接口现有明确的 `response_model`，文档 (`/docs`) 中可直接查看字段含义。
+
+## 示例库
+
+仓库新增 `examples/` 目录，覆盖本地调用、目标检测和 HTTP 客户端等典型场景：
+
+- `basic_ocr.py`：最小 OCR 示例，可演示概率输出与颜色过滤。
+- `detector.py`：演示如何用 `det=True` 模式返回所有检测框。
+- `api_client.py`：演示如何向 `python -m ddddocr api` 服务发送 JSON 请求。
+
+详细说明见 `examples/README.md`，可结合 README 其他章节快速起步。

@@ -1,0 +1,10 @@
+numpy>=1.19.0
+Pillow>=8.0.0
+onnxruntime>=1.8.0
+opencv-python>=4.5.0; sys_platform == "win32" or sys_platform == "darwin"
+opencv-python-headless>=4.5.0; sys_platform == "linux"
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-multipart>=0.0.5
+pydantic>=1.8.0
+requests>=2.25.0

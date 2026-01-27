@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ddddocr"
+version = "1.5.8"
+description = "带带弟弟OCR"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "sml2h3" }]
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "numpy",
+  "onnxruntime",
+  "Pillow",
+  "opencv-python; sys_platform == 'win32' or sys_platform == 'darwin'",
+  "opencv-python-headless; sys_platform == 'linux'",
+]
+
+[project.urls]
+Homepage = "https://github.com/sml2h3/ddddocr"
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.68.0",
+  "uvicorn>=0.15.0",
+  "python-multipart>=0.0.5",
+  "pydantic>=1.8.0",
+]
+
+[project.scripts]
+ddddocr = "ddddocr.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ddddocr*"]
+
+[tool.setuptools.package-data]
+ddddocr = ["*.onnx", "logo.png", "README.md"]

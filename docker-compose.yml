@@ -1,0 +1,81 @@
+version: '3.8'
+
+# DdddOcr API 服务的 Docker Compose 配置文件
+# 本文件定义了运行 DdddOcr API 服务所需的所有服务和配置
+
+services:
+  # DdddOcr API 服务
+  ddddocr-api:
+    # 使用当前目录的 Dockerfile 构建镜像
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    
+    # 容器名称
+    container_name: ddddocr-api
+    
+    # 端口映射: 宿主机端口:容器内部端口 (可通过环境变量覆盖宿主机端口)
+    ports:
+      - "${DDDDOCR_PORT:-8000}:8000"
+    
+    # 环境变量配置 (可通过宿主机上的环境变量覆盖)
+    # 这些环境变量将传递给 DdddOcr API 服务
+    environment:
+      # API 服务器配置
+      - DDDDOCR_HOST=0.0.0.0                             # 服务绑定地址，0.0.0.0 表示监听所有网络接口
+      - DDDDOCR_PORT=8000                                # 服务监听端口
+      - DDDDOCR_WORKERS=${DDDDOCR_WORKERS:-1}            # API 服务工作进程数，默认 1
+      
+      # OCR 引擎配置
+      - DDDDOCR_OCR=${DDDDOCR_OCR:-true}                 # 是否启用 OCR 功能，默认启用
+      - DDDDOCR_DET=${DDDDOCR_DET:-false}                # 是否启用目标检测功能，默认不启用
+      - DDDDOCR_OLD=${DDDDOCR_OLD:-false}                # 是否使用旧版 OCR 模型，默认不使用
+      - DDDDOCR_BETA=${DDDDOCR_BETA:-false}              # 是否使用 Beta 版 OCR 模型，默认不使用
+      - DDDDOCR_USE_GPU=${DDDDOCR_USE_GPU:-false}        # 是否使用 GPU 加速，默认不使用
+      - DDDDOCR_DEVICE_ID=${DDDDOCR_DEVICE_ID:-0}        # GPU 设备 ID，默认 0
+      - DDDDOCR_SHOW_AD=${DDDDOCR_SHOW_AD:-true}         # 是否显示广告，默认显示
+      
+      # 自定义模型配置
+      - DDDDOCR_IMPORT_ONNX_PATH=${DDDDOCR_IMPORT_ONNX_PATH:-""} # 自定义模型路径
+      - DDDDOCR_CHARSETS_PATH=${DDDDOCR_CHARSETS_PATH:-""}       # 自定义字符集路径
+    
+    # 卷挂载配置，用于持久化数据或提供自定义模型
+    volumes:
+      # 可选：挂载自定义模型目录
+      # - ./custom_models:/app/custom_models
+      
+      # 可选：如果需要日志持久化，取消下面的注释
+      # - ./logs:/app/logs
+    
+    # 容器重启策略
+    restart: unless-stopped
+    
+    # 资源限制配置
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'       # 限制 CPU 使用，例如 '2' 表示使用最多 2 个核心
+    #       memory: 2G      # 限制内存使用，例如 2G
+    
+    # GPU 支持配置（仅在需要 GPU 加速且宿主机有 NVIDIA GPU 时启用）
+    # 如果需要使用 GPU，取消注释以下 deploy 配置，同时将 DDDDOCR_USE_GPU 设置为 true
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    
+    # 健康检查配置
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# 可选：使用卷来持久化数据
+# volumes:
+#   logs:
+#     driver: local 

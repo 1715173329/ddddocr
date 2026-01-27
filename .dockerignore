@@ -1,0 +1,79 @@
+# Git相关
+.git
+.gitignore
+.github
+
+# Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.egg-info/
+.eggs/
+*.egg
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+
+# IDE相关
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.spyderproject
+.spyproject
+.ropeproject
+
+# 环境相关
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env
+.venv
+
+# 日志文件
+logs/
+*.log
+
+# 数据文件夹（可能包含测试数据）
+data/
+test_images/
+
+# Docker相关
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 文档
+docs/
+*.md
+
+# 特定排除（自定义模型或测试数据）
+custom_models/
+*.zip
+*.tar.gz
+*.csv
+*.json
+*.txt
+!requirements.txt 
